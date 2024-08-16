@@ -1,0 +1,11 @@
+*.tar
+*.sh
+test_path/
+output-diff-images/
+new-releases/
+.vscode/
+script.log
+*.json
+Dockerfile
+rev2.txt
+*.bak*
