@@ -18,7 +18,7 @@ NEW_RELEASES_DIR = "new-releases"
 def usage():
     print(
         """
-    Usage: script.py [--dev | --target] <image-list.json>
+    Usage: main.py [--dev | --target] <image-list.json>
 
     Options:
     --dev     Generate diff tar files between old and new image releases.
@@ -41,14 +41,21 @@ def usage():
                         }
                         ]
     Examples:
-    script.py --dev json-reg-images.json
-    script.py --target image-list.json
+    main.py --dev json-reg-images.json
+    main.py --target image-list.json
     """
     )
     sys.exit(1)
 
 
 def pull_image(client, image, tag):
+    """
+    Pull the Docker image from the registry if it does not exist locally.
+    
+    :param client: Docker client object.
+    :param image: Name of the Docker image.
+    :param tag: Tag of the Docker image
+    """
     try:
         client.images.get(f"{image}:{tag}")
     except docker.errors.ImageNotFound:
@@ -104,6 +111,14 @@ def read_from_blobs(directory_path):
 
 
 def extract_layers_and_files(client, image, tag, temp_dir):
+    """
+    Extract the layers and files from the Docker image.
+    
+    :param client: Docker client object.
+    :param image: Name of the Docker image.
+    :param tag: Tag of the Docker image.
+    :param temp_dir: Directory to store the extracted layers and files.
+    """    
     log.info(
         f"[INFO] Saving docker image {image}:{tag} to {os.path.join(temp_dir, 'image.tar')}"
     )
@@ -137,11 +152,20 @@ def save_differences(old_files, new_files, output_file):
 
 
 def generate_diff(client, image, tag1, tag2):
+    """
+    Generate a diff tar file between two versions of a Docker image.
+    
+    :param client: Docker client object.
+    :param image: Name of the Docker image.
+    :param tag1: Old version tag.
+    :param tag2: New version tag.    
+    """    
     reg_name_removed_img = image.replace("/", "_").replace(
         "\\", "_"
     )  # Handle both separators
     log.info(f"[INFO] Processing image {image} with tags {tag1} and {tag2}")
 
+    # Create temporary directories for extracting layers and storing differences
     temp_dir_r1 = tempfile.mkdtemp()
     temp_dir_r2 = tempfile.mkdtemp()
     temp_dir_diff = tempfile.mkdtemp()
@@ -149,12 +173,14 @@ def generate_diff(client, image, tag1, tag2):
     os.makedirs(os.path.join(temp_dir_diff, "blobs", "sha256"), exist_ok=True)
 
     try:
+        # Extract layers and files for the old and new versions
         log.info(f"[INFO] Extracting layers for {image}:{tag1}")
         extract_layers_and_files(client, image, tag1, temp_dir_r1)
 
         log.info(f"[INFO] Extracting layers for {image}:{tag2}")
         extract_layers_and_files(client, image, tag2, temp_dir_r2)
-
+        
+        # Read the SHA256 layer files from the blobs/sha256 directories
         old_version_layers = read_from_blobs(os.path.join(temp_dir_r1, "layers"))
         new_version_layers = read_from_blobs(os.path.join(temp_dir_r2, "layers"))
 
@@ -188,14 +214,25 @@ def generate_diff(client, image, tag1, tag2):
         log.info(f"[SUCCESS] Diff tar created successfully: {diff_tar}")
 
     finally:
+        # Clean up temporary directories
         shutil.rmtree(temp_dir_r1)
         shutil.rmtree(temp_dir_r2)
         shutil.rmtree(temp_dir_diff)
 
 
 def process_image(client, image, tag1, tag2):
-    sanitized_image = image.replace("/", "_").replace("\\", "_")
-    diff_tar = os.path.join(DIFF_OUTPUT_DIR, f"{sanitized_image}_diff_{tag2}.tar")
+    """
+    Process the existing diff tar file and update it based on the new release.
+    
+    :param client: Docker client object.
+    :param image: Name of the Docker image.
+    :param tag1: Old version tag.
+    :param tag2: New version tag.    
+    """
+    
+    
+    updated_image = image.replace("/", "_").replace("\\", "_")
+    diff_tar = os.path.join(DIFF_OUTPUT_DIR, f"{updated_image}_diff_{tag2}.tar")
 
     if not os.path.exists(diff_tar):
         log.error(f"[ERROR] Diff tar file {diff_tar} does not exist")
@@ -323,7 +360,7 @@ def process_image(client, image, tag1, tag2):
         
             
         updated_diff_tar = os.path.join(
-            NEW_RELEASES_DIR, f"{sanitized_image}_diff_{tag2}.tar"
+            NEW_RELEASES_DIR, f"{updated_image}_diff_{tag2}.tar"
         )
         log.info(f"[SUCCESS] Creating updated diff tar file {updated_diff_tar}")
         with tarfile.open(updated_diff_tar, "w") as tar:
