@@ -9,3 +9,6 @@ script.log
 Dockerfile
 rev2.txt
 *.bak*
+deployment/
+__pycache__/
+test/
