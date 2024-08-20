@@ -5,14 +5,38 @@ import os
 import argparse
 from utils import setup_logging, generate_diff, process_image
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Docker Image Layer Diff Tool")
-    parser.add_argument("--dev", action="store_true", help="Generate diff tar files between old and new image layers")
-    parser.add_argument("--process", action="store_true", help="Process the diff tar and create a final release image tar")
-    parser.add_argument("--image-list", default="image_list.json", help="A JSON file containing the list of images and tags to process")
-    parser.add_argument("--output-dir", type=str, default="output-diff-images", help="Directory to store the diff tar files")
-    parser.add_argument("--release-dir", type=str, default="new-releases", help="Directory to store the final release image tar files")
+    parser.add_argument(
+        "--dev",
+        action="store_true",
+        help="Generate diff tar files between old and new image layers",
+    )
+    parser.add_argument(
+        "--process",
+        action="store_true",
+        help="Process the diff tar and create a final release image tar",
+    )
+    parser.add_argument(
+        "--image-list",
+        default="image-list.json",
+        help="A JSON file containing the list of images and tags to process",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="output-diff-images",
+        help="Directory to store the diff tar files",
+    )
+    parser.add_argument(
+        "--release-dir",
+        type=str,
+        default="new-releases",
+        help="Directory to store the final release image tar files",
+    )
     return parser.parse_args()
+
 
 def main():
     args = parse_arguments()
@@ -42,7 +66,10 @@ def main():
             generate_diff(client, image, tag1, tag2, args.output_dir, log)
 
         if args.process:
-            process_image(client, image, tag1, tag2, args.output_dir, args.release_dir, log)
+            process_image(
+                client, image, tag1, tag2, args.output_dir, args.release_dir, log
+            )
+
 
 if __name__ == "__main__":
     main()
